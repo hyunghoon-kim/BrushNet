@@ -1,4 +1,9 @@
 # Initially taken from GitHub's Python gitignore file
+test_samples/concat/*
+test_samples/img/*
+test_samples/mask/*
+test_samples/result/*
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
