@@ -1,6 +1,7 @@
 # Initially taken from GitHub's Python gitignore file
 test_samples/concat/*
 test_samples/img/*
+test_samples/inv_mask/*
 test_samples/mask/*
 test_samples/result/*
 

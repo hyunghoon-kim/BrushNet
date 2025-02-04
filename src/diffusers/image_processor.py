@@ -24,6 +24,7 @@ from PIL import Image, ImageFilter, ImageOps
 
 from .configuration_utils import ConfigMixin, register_to_config
 from .utils import CONFIG_NAME, PIL_INTERPOLATION, deprecate
+import cv2
 
 
 PipelineImageInput = Union[
@@ -87,9 +88,12 @@ class VaeImageProcessor(ConfigMixin):
         """
         Convert a numpy image or a batch of images to a PIL image.
         """
+        # print("----------------------------------------","images min:", images.min(), "images max:", images.max())
+        # cv2.imwrite("tttt.jpg", images.astype(np.uint8))
         if images.ndim == 3:
             images = images[None, ...]
         images = (images * 255).round().astype("uint8")
+        
         if images.shape[-1] == 1:
             # special case for grayscale (single channel) images
             pil_images = [Image.fromarray(image.squeeze(), mode="L") for image in images]

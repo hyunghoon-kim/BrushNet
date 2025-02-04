@@ -11,7 +11,8 @@ base_model_path = "data/ckpt/juggernautXL_juggernautX"
 # base_model_path = "stabilityai/stable-diffusion-xl-base-1.0"
 
 # input brushnet ckpt path
-brushnet_path = "data/ckpt/brushnet"
+# brushnet_path = "data/ckpt/brushnet" # default
+brushnet_path = "data/ckpt/segmentation_mask_brushnet_ckpt_sdxl_v1"
 
 # choose whether using blended operation
 blended = True
@@ -100,4 +101,4 @@ for image_path, mask_path in zip(image_paths, mask_paths):
 
     print(filename)
     image.save(f"test_samples/result/{filename}")
-    # break
+    break

@@ -1,0 +1,57 @@
+# --pretrained_model_name_or_path (str, 필수): Hugging Face 모델 허브의 사전 학습 모델 경로나 식별자
+# --pretrained_vae_model_name_or_path (str, 기본값: None): 안정적인 학습을 위한 개선된 VAE 모델 경로나 식별자
+# --brushnet_model_name_or_path (str, 기본값: None): 사전 학습된 BrushNet 모델 경로나 식별자 (없으면 UNet에서 초기화)
+# --variant (str, 기본값: None): 사전 학습 모델 파일의 변형(ex: "fp16")
+# --revision (str, 기본값: None): 사전 학습 모델의 특정 revision 지정
+# --tokenizer_name (str, 기본값: None): 사전 학습 토크나이저 이름 또는 경로 (모델명과 다를 경우)
+# --output_dir (str, 기본값: "brushnet-model"): 모델 예측 결과 및 체크포인트 저장 디렉토리
+# --cache_dir (str, 기본값: None): 다운로드 받은 모델/데이터셋 캐시 저장 디렉토리
+# --seed (int, 기본값: None): 실험 재현을 위한 시드 값
+# --resolution (int, 기본값: 512): 모든 입력 이미지가 리사이즈될 해상도 (8의 배수여야 함)
+# --crops_coords_top_left_h (int, 기본값: 0): SDXL UNet용 crop 좌측 상단 높이 좌표
+# --crops_coords_top_left_w (int, 기본값: 0): SDXL UNet용 crop 좌측 상단 너비 좌표
+# --train_batch_size (int, 기본값: 4): 각 디바이스별 학습 배치 크기
+# --num_train_epochs (int, 기본값: 10000): 학습 에폭 수
+# --max_train_steps (int, 기본값: None): 총 학습 스텝 수 (설정 시 num_train_epochs보다 우선 적용)
+# --checkpointing_steps (int, 기본값: 500): 몇 스텝마다 체크포인트를 저장할지 결정
+# --checkpoints_total_limit (int, 기본값: None): 저장할 최대 체크포인트 수 (초과 시 오래된 체크포인트 삭제)
+# --resume_from_checkpoint (str, 기본값: None): 이전 체크포인트에서 학습 재개 ("latest" 또는 특정 경로)
+# --gradient_accumulation_steps (int, 기본값: 1): 업데이트 전에 누적할 gradient 스텝 수
+# --gradient_checkpointing (flag): 메모리 절약을 위해 gradient checkpointing 사용 여부
+# --learning_rate (float, 기본값: 5e-6): 초기 학습률 (warmup 후)
+# --scale_lr (flag, 기본값: False): GPU 수, 배치 크기, 누적 스텝에 따라 학습률을 자동 스케일링할지 여부
+# --lr_scheduler (str, 기본값: "constant"): 사용할 learning rate scheduler 종류 ("linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup" 등)
+# --lr_warmup_steps (int, 기본값: 500): learning rate warmup에 사용할 스텝 수
+# --lr_num_cycles (int, 기본값: 1): cosine_with_restarts 스케줄러 사용 시, 재시작(사이클) 횟수
+# --lr_power (float, 기본값: 1.0): polynomial 스케줄러 사용 시, 거듭제곱 계수
+# --use_8bit_adam (flag): 메모리 절약을 위해 8-bit Adam 옵티마이저 사용 여부
+# --dataloader_num_workers (int, 기본값: 0): 데이터 로딩에 사용할 서브 프로세스 수 (0이면 메인 프로세스 사용)
+# --adam_beta1 (float, 기본값: 0.9): Adam 옵티마이저의 beta1 값
+# --adam_beta2 (float, 기본값: 0.999): Adam 옵티마이저의 beta2 값
+# --adam_weight_decay (float, 기본값: 1e-2): Adam 옵티마이저에 적용할 weight decay 값
+# --adam_epsilon (float, 기본값: 1e-08): Adam 옵티마이저의 epsilon 값 (수치 안정성용)
+# --max_grad_norm (float, 기본값: 1.0): gradient clipping을 위한 최대 norm 값
+# --push_to_hub (flag): 학습 후 모델을 Hugging Face Hub에 업로드할지 여부
+# --hub_token (str, 기본값: None): 모델 업로드에 사용할 허깅페이스 토큰
+# --hub_model_id (str, 기본값: None): 로컬 output_dir과 동기화할 허깅페이스 레포지토리 이름
+# --logging_dir (str, 기본값: "logs"): TensorBoard 등 로깅 도구에서 사용할 로그 디렉토리
+# --allow_tf32 (flag): Nvidia Ampere GPU에서 TF32 연산을 허용하여 학습 속도 향상 여부
+# --report_to (str, 기본값: "tensorboard"): 로그를 전송할 플랫폼 ("tensorboard", "wandb", "comet_ml" 등)
+# --mixed_precision (str, 기본값: None, 선택지: ["no", "fp16", "bf16"]): mixed precision 학습 사용 여부 ("fp16" 또는 "bf16")
+# --enable_xformers_memory_efficient_attention (flag): xformers 라이브러리를 사용해 메모리 효율적인 어텐션 활성화 여부
+# --set_grads_to_none (flag): 메모리 절약을 위해 기울기를 0 대신 None으로 초기화할지 여부
+# --dataset_name (str, 기본값: None): 허깅페이스 허브나 로컬의 데이터셋 이름/경로
+# --dataset_config_name (str, 기본값: None): 데이터셋 구성 이름 (구성이 여러 개일 경우)
+# --train_data_dir (str, 기본값: None): 학습 데이터가 포함된 로컬 폴더 경로 (dataset_name과 동시에 지정하면 안 됨)
+# --image_column (str, 기본값: "image"): 데이터셋에서 타겟 이미지가 있는 컬럼 이름
+# --conditioning_image_column (str, 기본값: "conditioning_image"): 데이터셋에서 BrushNet 조건 이미지가 있는 컬럼 이름
+# --caption_column (str, 기본값: "text"): 데이터셋에서 이미지 캡션이 포함된 컬럼 이름
+# --max_train_samples (int, 기본값: None): 디버깅 또는 빠른 실험을 위해 사용할 최대 학습 샘플 수
+# --proportion_empty_prompts (float, 기본값: 0): 전체 캡션 중 일정 비율을 빈 문자열로 대체할 비율
+# --validation_prompt (str, 기본값: ["A cake on the table."], nargs="+"): 검증 시 사용할 프롬프트 목록
+# --validation_image (str, 기본값: ["examples/brushnet/src/test_image.jpg"], nargs="+"): 검증 시 사용할 이미지 경로 목록
+# --validation_mask (str, 기본값: ["examples/brushnet/src/test_mask.jpg"], nargs="+"): 검증 시 사용할 마스크 이미지 경로 목록
+# --num_validation_images (int, 기본값: 4): 각 검증 프롬프트-이미지 쌍 당 생성할 이미지 개수
+# --validation_steps (int, 기본값: 100): 몇 스텝마다 검증을 실행할지 결정하는 스텝 수
+# --tracker_project_name (str, 기본값: "sd_xl_train_brushnet"): Accelerate Tracker에서 사용할 프로젝트 이름
+# --random_mask (flag): 학습 시 랜덤 마스크를 생성하여 사용할지 여부
