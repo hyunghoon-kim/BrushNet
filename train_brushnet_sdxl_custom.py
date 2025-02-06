@@ -1119,7 +1119,7 @@ def main(args):
                     split="train", 
                     streaming=True)
     # train_dataset_len= 10000*len(os.listdir(args.train_data_dir)) # 😀 REPLACE
-    train_dataset_len = args.train_dataset_len # 😀 REPACE
+    train_dataset_len = args.train_dataset_len # 😀 REPLACE
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,
         shuffle=False,
