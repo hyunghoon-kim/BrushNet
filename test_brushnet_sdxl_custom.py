@@ -9,14 +9,13 @@ import os
 # choose the base model here
 # base_model_path = "stabilityai/stable-diffusion-xl-base-1.0"
 # base_model_path = "RunDiffusion/Juggernaut-XL-v9"
-base_model_path = "/workspace/sd_ckpts/d****"
+base_model_path = "backbone_path"
 
 # input brushnet ckpt path
-# brushnet_path = "data/ckpt/segmentation_mask_brushnet_ckpt_sdxl_v1" # original
-brushnet_path = "/workspace/BrushNet/runs/logs/brushnetsdxl_segmentationmask" # v1
+brushnet_path = "brushnet_path" # original
 
-# result_backbone_brushnet (e.x) result_draph-v1_org
-output_dirname = "result_d****-v1_ft1"
+# result_backbone-name_brushnet-name (e.x) result_draph-v1_org
+output_dirname = "result_backbonename-brushnetname"
 
 if os.path.exists(f"test_samples/{output_dirname}") == False:
     os.makedirs(f"test_samples/{output_dirname}", exist_ok=True)
