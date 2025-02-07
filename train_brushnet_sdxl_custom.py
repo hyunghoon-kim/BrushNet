@@ -42,7 +42,7 @@ from diffusers import (
     UNet2DConditionModel,
     UniPCMultistepScheduler,
 )
-from diffusers.optimization import get_scheduler
+from diffusers.optimization import get_scheduler, get_scheduler_fix, get_optimizer
 from diffusers.utils import check_min_version, is_wandb_available, make_image_grid
 from diffusers.utils.hub_utils import load_or_create_model_card, populate_model_card
 from diffusers.utils.import_utils import is_xformers_available
@@ -56,6 +56,22 @@ if is_wandb_available():
 check_min_version("0.27.0.dev0")
 
 logger = get_logger(__name__)
+
+
+def resize_and_pad(img, resolution, pad_color=(255, 255, 255)):
+    org_w, org_h = img.size
+    scale = resolution / max(org_w, org_h)
+    new_w = int(org_w * scale)
+    new_h = int(org_h * scale)
+
+    resized_img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    new_img = Image.new("RGB", (resolution, resolution), pad_color)
+
+    paste_x = (resolution - new_w)//2
+    paste_y = (resolution - new_h)//2
+
+    new_img.paste(resized_img, (paste_x, paste_y))
+    return new_img
 
 
 def log_validation(vae, unet, brushnet, args, accelerator, weight_dtype, step, is_final_validation=False):
@@ -117,12 +133,14 @@ def log_validation(vae, unet, brushnet, args, accelerator, weight_dtype, step, i
     
     for validation_prompt, validation_image, validation_mask in zip(validation_prompts, validation_images, validation_masks):
         validation_image = Image.open(validation_image).convert("RGB")
-        validation_image = validation_image.resize((args.resolution, args.resolution))
+        # validation_image = validation_image.resize((args.resolution, args.resolution)) # 😀 FIX
+        validation_image = resize_and_pad(validation_image, args.resolution, (255,255,255))
+        
         validation_mask = Image.open(validation_mask).convert("RGB")
-        validation_mask = validation_mask.resize((args.resolution, args.resolution))
+        # validation_mask = validation_mask.resize((args.resolution, args.resolution)) # 😀 FIX
+        validation_mask = resize_and_pad(validation_mask, args.resolution, (255,255,255))
         
         validation_image = Image.composite(Image.new('RGB', (validation_image.size[0], validation_image.size[1]), (0, 0, 0)), validation_image, validation_mask.convert("L"))
-
 
         images = []
         for _ in range(args.num_validation_images):
@@ -386,9 +404,23 @@ def parse_args(input_args=None):
             ' "constant", "constant_with_warmup"]'
         ),
     )
+    # 😀 ADD
+    parser.add_argument("--optimizer_type", type=str, default=None, help="optimizer type, if None use adamW")
+    # 😀 ADD
+    parser.add_argument("--lr_scheduler_type", type=str, default=None, help="not use for custom scheduer")
+    # 😀 ADD
+    parser.add_argument("--lr_scheduler_args", type=str, default=None, nargs="*", help='additional arguments for scheduler (like "T_max=100") / スケジューラの追加引数（例： "T_max100"）',)
+    # 😀 FIX
+    parser.add_argument("--lr_warmup_steps", type=int, default=0, help="Number of steps for the warmup in the lr scheduler.")
+    # 😀 ADD
     parser.add_argument(
-        "--lr_warmup_steps", type=int, default=500, help="Number of steps for the warmup in the lr scheduler."
+        "--optimizer_args",
+        type=str,
+        default=None,
+        nargs="*",
+        help='additional arguments for optimizer (like "weight_decay=0.01 betas=0.9,0.999 ...") / オプティマイザの追加引数（例： "weight_decay=0.01 betas=0.9,0.999 ..."）',
     )
+    
     parser.add_argument(
         "--lr_num_cycles",
         type=int,
@@ -1070,7 +1102,7 @@ def main(args):
         )
 
     # Use 8-bit Adam for lower memory usage or to fine-tune the model in 16GB GPUs
-    if args.use_8bit_adam:
+    if args.use_8bit_adam and not args.optimizer_type:
         try:
             import bitsandbytes as bnb
         except ImportError:
@@ -1079,18 +1111,28 @@ def main(args):
             )
 
         optimizer_class = bnb.optim.AdamW8bit
-    else:
+    elif not args.use_8bit_adam and not args.optimizer_type: # default, 😀 FIX
         optimizer_class = torch.optim.AdamW
+    elif not args.use_8bit_adam and args.optimizer_type: # 😀 FIX
+        if args.optimizer_type.lower() == "Prodigy".lower():
+            print("use prodigy") if accelerator.is_main_process else ...
+    else:
+        raise ValueError(f"args.use_8bit_adam: {args.use_8bit_adam}, args.optimizer_type:{args.optimizer_type}")
 
     # Optimizer creation
     params_to_optimize = brushnet.parameters()
-    optimizer = optimizer_class(
-        params_to_optimize,
-        lr=args.learning_rate,
-        betas=(args.adam_beta1, args.adam_beta2),
-        weight_decay=args.adam_weight_decay,
-        eps=args.adam_epsilon,
-    )
+
+
+    # 😀 REPLACE
+    # optimizer = optimizer_class(
+    #     params_to_optimize,
+    #     lr=args.learning_rate,
+    #     betas=(args.adam_beta1, args.adam_beta2),
+    #     weight_decay=args.adam_weight_decay,
+    #     eps=args.adam_epsilon,
+    # )
+    # REPLACE
+    optimizer_name, optimizer_args, optimizer = get_optimizer(args, params_to_optimize)
 
     # For mixed precision training we cast the text_encoder and vae weights to half-precision
     # as these models are only used for inference, keeping weights in full precision is not required.
@@ -1136,14 +1178,15 @@ def main(args):
         args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch # 😀 ASSIGN
         overrode_max_train_steps = True
         
-    lr_scheduler = get_scheduler(
-        args.lr_scheduler,
-        optimizer=optimizer,
-        num_warmup_steps=args.lr_warmup_steps * accelerator.num_processes,
-        num_training_steps=args.max_train_steps * accelerator.num_processes,
-        num_cycles=args.lr_num_cycles,
-        power=args.lr_power,
-    )
+    # lr_scheduler = get_scheduler(
+    #     args.lr_scheduler,
+    #     optimizer=optimizer,
+    #     num_warmup_steps=args.lr_warmup_steps * accelerator.num_processes,
+    #     num_training_steps=args.max_train_steps * accelerator.num_processes,
+    #     num_cycles=args.lr_num_cycles,
+    #     power=args.lr_power,
+    # )
+    lr_scheduler = get_scheduler_fix(args, optimizer, accelerator.num_processes)
 
     # Prepare everything with our `accelerator`.
     brushnet, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(
@@ -1174,7 +1217,7 @@ def main(args):
         init_kwargs = {} # 😀 ADD for wandb
         if args.wandb_run_name:
             init_kwargs["wandb"] = {"name": args.wandb_run_name}
-
+        tracker_config["optimizer_args"] = str(tracker_config.get("optimizer_args")) # 😀 FIX, for logging error
         accelerator.init_trackers(args.tracker_project_name, config=tracker_config, init_kwargs=init_kwargs)
 
     # Train!
